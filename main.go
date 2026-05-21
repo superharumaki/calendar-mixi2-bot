@@ -19,6 +19,12 @@ import (
 	"google.golang.org/grpc/credentials"
 )
 
+type State struct {
+	LastPostDate string `json:"last_post_date"`
+}
+
+const stateFile = "state.json"
+
 type CalendarEvents struct {
 	Items []Event `json:"items"`
 }
@@ -55,6 +61,15 @@ func main() {
 	loc, err := time.LoadLocation("Asia/Tokyo")
 	if err != nil {
 		log.Fatal(err)
+	}
+
+	today := time.Now().In(loc).Format("2006-01-02")
+
+	state := loadState()
+
+	if state.LastPostDate == today {
+		log.Println("今日はすでに投稿済みなので終了")
+		return
 	}
 
 	now := time.Now().In(loc)
@@ -97,6 +112,10 @@ func main() {
 	}
 
 	log.Println("投稿成功")
+
+	state.LastPostDate = today
+	saveState(state)
+
 }
 
 func buildPostText(e Event, loc *time.Location) string {
@@ -267,4 +286,31 @@ func postToMixi2(text string) error {
 	)
 
 	return err
+}
+
+func loadState() State {
+	data, err := os.ReadFile(stateFile)
+	if err != nil {
+		return State{}
+	}
+
+	var s State
+
+	if err := json.Unmarshal(data, &s); err != nil {
+		return State{}
+	}
+
+	return s
+}
+
+func saveState(s State) {
+	data, err := json.MarshalIndent(s, "", "  ")
+	if err != nil {
+		log.Println("state保存失敗:", err)
+		return
+	}
+
+	if err := os.WriteFile(stateFile, data, 0644); err != nil {
+		log.Println("state書き込み失敗:", err)
+	}
 }
