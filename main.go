@@ -33,12 +33,10 @@ type Event struct {
 	Summary     string `json:"summary"`
 	Location    string `json:"location"`
 	Description string `json:"description"`
-
-	Start struct {
+	Start       struct {
 		Date     string `json:"date"`
 		DateTime string `json:"dateTime"`
 	} `json:"start"`
-
 	End struct {
 		Date     string `json:"date"`
 		DateTime string `json:"dateTime"`
@@ -64,7 +62,6 @@ func main() {
 	}
 
 	today := time.Now().In(loc).Format("2006-01-02")
-
 	state := loadState()
 
 	if state.LastPostDate == today {
@@ -88,7 +85,7 @@ func main() {
 		}
 
 		for _, e := range events {
-			post := buildPostText(e, loc)
+			post := buildPostText(e)
 			if post != "" {
 				posts = append(posts, post)
 			}
@@ -100,7 +97,7 @@ func main() {
 		return
 	}
 
-	text := strings.Join(posts, "\n\n")
+	text := formatDate(tomorrow) + "\n\n" + strings.Join(posts, "\n\n")
 
 	if len([]rune(text)) > 450 {
 		text = string([]rune(text)[:440]) + "\n…"
@@ -115,29 +112,21 @@ func main() {
 
 	state.LastPostDate = today
 	saveState(state)
-
 }
 
-func buildPostText(e Event, loc *time.Location) string {
-	dateText := formatDateOnly(e, loc)
+func buildPostText(e Event) string {
 	channelText := cleanLocation(e.Location)
 	titleText := cleanTitle(e.Summary)
 	subtitleText := cleanSubtitle(e.Description)
 
 	var lines []string
 
-	if dateText != "" {
-		lines = append(lines, dateText)
-	}
-
 	if channelText != "" {
 		lines = append(lines, channelText)
 	}
-
 	if titleText != "" {
 		lines = append(lines, titleText)
 	}
-
 	if subtitleText != "" {
 		lines = append(lines, subtitleText)
 	}
@@ -146,9 +135,7 @@ func buildPostText(e Event, loc *time.Location) string {
 }
 
 func fetchEvents(calendarID string, apiKey string, start time.Time, end time.Time) ([]Event, error) {
-	base := "https://www.googleapis.com/calendar/v3/calendars/" +
-		url.PathEscape(calendarID) +
-		"/events"
+	base := "https://www.googleapis.com/calendar/v3/calendars/" + url.PathEscape(calendarID) + "/events"
 
 	q := url.Values{}
 	q.Set("key", apiKey)
@@ -181,22 +168,8 @@ func fetchEvents(calendarID string, apiKey string, start time.Time, end time.Tim
 	return data.Items, nil
 }
 
-func formatDateOnly(e Event, loc *time.Location) string {
+func formatDate(t time.Time) string {
 	weekdays := []string{"日", "月", "火", "水", "木", "金", "土"}
-
-	var t time.Time
-	var err error
-
-	if e.Start.Date != "" {
-		t, err = time.ParseInLocation("2006-01-02", e.Start.Date, loc)
-	} else {
-		t, err = time.Parse(time.RFC3339, e.Start.DateTime)
-		t = t.In(loc)
-	}
-
-	if err != nil {
-		return ""
-	}
 
 	return fmt.Sprintf(
 		"%d月%d日（%s）",
@@ -233,9 +206,9 @@ func cleanSubtitle(description string) string {
 	}
 
 	lines := strings.Split(description, "\n")
-
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
+
 		if line == "" {
 			continue
 		}
@@ -295,7 +268,6 @@ func loadState() State {
 	}
 
 	var s State
-
 	if err := json.Unmarshal(data, &s); err != nil {
 		return State{}
 	}
@@ -304,7 +276,7 @@ func loadState() State {
 }
 
 func saveState(s State) {
-	data, err := json.MarshalIndent(s, "", "  ")
+	data, err := json.MarshalIndent(s, "", " ")
 	if err != nil {
 		log.Println("state保存失敗:", err)
 		return
