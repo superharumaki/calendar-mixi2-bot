@@ -60,7 +60,7 @@ func main() {
 
 	loc, err := time.LoadLocation("Asia/Tokyo")
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("タイムゾーン設定失敗:", err)
 	}
 
 	today := time.Now().In(loc).Format("2006-01-02")
@@ -108,7 +108,7 @@ func main() {
 
 	err = postToMixi2(text)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("投稿失敗:", err)
 	}
 
 	log.Println("投稿成功")
