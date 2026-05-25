@@ -161,13 +161,20 @@ func fetchEvents(calendarID string, apiKey string, start time.Time, end time.Tim
 
 	reqURL := base + "?" + q.Encode()
 
-	resp, err := http.Get(reqURL)
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+	}
+
+	resp, err := client.Get(reqURL)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
 
-	body, _ := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("Google Calendar API status %d: %s", resp.StatusCode, string(body))
