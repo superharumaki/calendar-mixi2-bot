@@ -100,6 +100,12 @@ func main() {
 	text := formatDate(tomorrow) + "\n\n" + strings.Join(posts, "\n\n")
 	text = trimPostText(text)
 
+	if os.Getenv("PREVIEW") == "1" {
+		log.Println("プレビュー:")
+		log.Println(text)
+		return
+	}
+
 	err = postToMixi2(text)
 	if err != nil {
 		log.Fatal("投稿失敗:", err)
@@ -135,7 +141,6 @@ func trimPostText(text string) string {
 	const maxLen = 147
 
 	runes := []rune(text)
-
 	if len(runes) <= maxLen {
 		return text
 	}
