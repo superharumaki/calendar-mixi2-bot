@@ -141,11 +141,11 @@ func trimPostText(text string) string {
 	const maxPostLen = 147
 
 	runes := []rune(text)
-	if len(runes) <= maxLen {
+	if len(runes) <= maxPostLen {
 		return text
 	}
 
-	return string(runes[:maxLen-1]) + "…"
+	return string(runes[:maxPostLen-1]) + "…"
 }
 
 func fetchEvents(calendarID string, apiKey string, start time.Time, end time.Time) ([]Event, error) {
