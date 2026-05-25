@@ -98,17 +98,14 @@ func main() {
 	}
 
 	text := formatDate(tomorrow) + "\n\n" + strings.Join(posts, "\n\n")
-
-	if len([]rune(text)) > 450 {
-		text = string([]rune(text)[:440]) + "\n…"
-	}
+	text = trimPostText(text)
 
 	err = postToMixi2(text)
 	if err != nil {
 		log.Fatal("投稿失敗:", err)
 	}
 
-	log.Println("投稿成功")
+	log.Println("投稿成功:", text)
 
 	state.LastPostDate = today
 	saveState(state)
@@ -132,6 +129,18 @@ func buildPostText(e Event) string {
 	}
 
 	return strings.TrimSpace(strings.Join(lines, "\n"))
+}
+
+func trimPostText(text string) string {
+	const maxLen = 147
+
+	runes := []rune(text)
+
+	if len(runes) <= maxLen {
+		return text
+	}
+
+	return string(runes[:maxLen-1]) + "…"
 }
 
 func fetchEvents(calendarID string, apiKey string, start time.Time, end time.Time) ([]Event, error) {
