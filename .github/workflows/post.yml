@@ -44,5 +44,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git pull --rebase
           git add state.json
-          git diff --cached --quiet || git commit -m "update calendar bot state"
+          git diff --cached --quiet && exit 0
+          git commit -m "update calendar bot state"
+          git pull --rebase
           git push
