@@ -46,4 +46,14 @@ GitHub Secrets に以下を登録してください。
 go run .
 ```
 
+## プレビュー実行
+
+投稿せずに内容だけ確認したい場合:
+
+```bash
+PREVIEW=1 go run .
+```
+
+---
+
 GitHub Actionsからも自動実行されます。
