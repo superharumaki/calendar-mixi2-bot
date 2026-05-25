@@ -138,7 +138,7 @@ func buildPostText(e Event) string {
 }
 
 func trimPostText(text string) string {
-	const maxLen = 147
+	const maxPostLen = 147
 
 	runes := []rune(text)
 	if len(runes) <= maxLen {
