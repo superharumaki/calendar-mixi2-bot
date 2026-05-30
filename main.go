@@ -19,11 +19,26 @@ import (
 	"google.golang.org/grpc/credentials"
 )
 
+const stateFile = "state.json"
+
+var httpClient = &http.Client{
+	Timeout: 10 * time.Second,
+}
+
+var eventCodeRe = regexp.MustCompile(`\s*[0-9]{6,}$`)
+var channelPrefixRe = regexp.MustCompile(`^CS\s*[^“"]+`)
+var locationBracketRe = regexp.MustCompile(`^[（(](.+)[）)]$`)
+
+var calendars = []string{
+	"cafa1c6ip201o1jj80r82mqu00@group.calendar.google.com",
+	"5r60kb9t5ttr22d07q13rrj590@group.calendar.google.com",
+	"a.f.calendar.ver2@gmail.com",
+	"b9m0meq9124s6a57ndbofua09g@group.calendar.google.com",
+}
+
 type State struct {
 	LastPostDate string `json:"last_post_date"`
 }
-
-const stateFile = "state.json"
 
 type CalendarEvents struct {
 	Items []Event `json:"items"`
@@ -43,18 +58,8 @@ type Event struct {
 	} `json:"end"`
 }
 
-var calendars = []string{
-	"cafa1c6ip201o1jj80r82mqu00@group.calendar.google.com",
-	"5r60kb9t5ttr22d07q13rrj590@group.calendar.google.com",
-	"a.f.calendar.ver2@gmail.com",
-	"b9m0meq9124s6a57ndbofua09g@group.calendar.google.com",
-}
-
 func main() {
-	apiKey := os.Getenv("GOOGLE_API_KEY")
-	if apiKey == "" {
-		log.Fatal("GOOGLE_API_KEY is missing")
-	}
+	apiKey := requireEnv("GOOGLE_API_KEY")
 
 	loc, err := time.LoadLocation("Asia/Tokyo")
 	if err != nil {
@@ -106,8 +111,7 @@ func main() {
 		return
 	}
 
-	err = postToMixi2(text)
-	if err != nil {
+	if err := postToMixi2(text); err != nil {
 		log.Fatal("投稿失敗:", err)
 	}
 
@@ -115,6 +119,15 @@ func main() {
 
 	state.LastPostDate = today
 	saveState(state)
+}
+
+func requireEnv(key string) string {
+	value := os.Getenv(key)
+	if value == "" {
+		log.Fatal(key + " missing value")
+	}
+
+	return value
 }
 
 func buildPostText(e Event) string {
@@ -138,6 +151,7 @@ func buildPostText(e Event) string {
 }
 
 func trimPostText(text string) string {
+	// mixi2投稿本文の上限に収まるようにするための最大文字数
 	const maxPostLen = 147
 
 	runes := []rune(text)
@@ -161,11 +175,7 @@ func fetchEvents(calendarID string, apiKey string, start time.Time, end time.Tim
 
 	reqURL := base + "?" + q.Encode()
 
-	client := &http.Client{
-		Timeout: 10 * time.Second,
-	}
-
-	resp, err := client.Get(reqURL)
+	resp, err := httpClient.Get(reqURL)
 	if err != nil {
 		return nil, err
 	}
@@ -181,8 +191,7 @@ func fetchEvents(calendarID string, apiKey string, start time.Time, end time.Tim
 	}
 
 	var data CalendarEvents
-	err = json.Unmarshal(body, &data)
-	if err != nil {
+	if err := json.Unmarshal(body, &data); err != nil {
 		return nil, err
 	}
 
@@ -202,22 +211,21 @@ func formatDate(t time.Time) string {
 
 func cleanLocation(location string) string {
 	location = strings.TrimSpace(location)
-	location = strings.Trim(location, "（）()")
+
+	if m := locationBracketRe.FindStringSubmatch(location); m != nil {
+		return strings.TrimSpace(m[1])
+	}
+
 	return location
 }
 
 func cleanTitle(summary string) string {
 	summary = strings.TrimSpace(summary)
 
-	reCode := regexp.MustCompile(`\s*[0-9]{6,}$`)
-	summary = reCode.ReplaceAllString(summary, "")
+	summary = eventCodeRe.ReplaceAllString(summary, "")
+	summary = channelPrefixRe.ReplaceAllString(summary, "")
 
-	reChannel := regexp.MustCompile(`^CS\s*[^“"]+`)
-	summary = reChannel.ReplaceAllString(summary, "")
-
-	summary = strings.TrimSpace(summary)
-
-	return summary
+	return strings.TrimSpace(summary)
 }
 
 func cleanSubtitle(description string) string {
@@ -246,9 +254,9 @@ func cleanSubtitle(description string) string {
 
 func postToMixi2(text string) error {
 	authenticator, err := auth.NewAuthenticator(
-		os.Getenv("CLIENT_ID"),
-		os.Getenv("CLIENT_SECRET"),
-		"https://application-auth.mixi.social/oauth2/token",
+		requireEnv("CLIENT_ID"),
+		requireEnv("CLIENT_SECRET"),
+		requireEnv("TOKEN_URL"),
 	)
 	if err != nil {
 		return err
@@ -260,7 +268,7 @@ func postToMixi2(text string) error {
 	}
 
 	conn, err := grpc.NewClient(
-		"application-api.mixi.social:443",
+		requireEnv("API_ADDRESS"),
 		grpc.WithTransportCredentials(
 			credentials.NewClientTLSFromCert(nil, ""),
 		),
@@ -297,13 +305,12 @@ func loadState() State {
 }
 
 func saveState(s State) {
-	data, err := json.MarshalIndent(s, "", " ")
+	data, err := json.MarshalIndent(s, "", "  ")
 	if err != nil {
-		log.Println("state保存失敗:", err)
-		return
+		log.Fatal("state保存失敗:", err)
 	}
 
 	if err := os.WriteFile(stateFile, data, 0644); err != nil {
-		log.Println("state書き込み失敗:", err)
+		log.Fatal("state書き込み失敗:", err)
 	}
 }
