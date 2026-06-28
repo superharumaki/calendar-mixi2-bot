@@ -34,6 +34,7 @@ var calendars = []string{
 	"5r60kb9t5ttr22d07q13rrj590@group.calendar.google.com",
 	"a.f.calendar.ver2@gmail.com",
 	"b9m0meq9124s6a57ndbofua09g@group.calendar.google.com",
+	"ce7aa08b57003e9be9e7ac13ab0e54666a2688724e9f2ed458c479005adbb3de@group.calendar.google.com",
 }
 
 type State struct {
