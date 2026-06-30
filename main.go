@@ -133,7 +133,6 @@ func requireEnv(key string) string {
 func buildPostText(e Event) string {
 	channelText := cleanLocation(e.Location)
 	titleText := cleanTitle(e.Summary)
-	subtitleText := cleanSubtitle(e.Description)
 
 	var lines []string
 
@@ -142,9 +141,6 @@ func buildPostText(e Event) string {
 	}
 	if titleText != "" {
 		lines = append(lines, titleText)
-	}
-	if subtitleText != "" {
-		lines = append(lines, subtitleText)
 	}
 
 	return strings.TrimSpace(strings.Join(lines, "\n"))
@@ -226,30 +222,6 @@ func cleanTitle(summary string) string {
 	summary = channelPrefixRe.ReplaceAllString(summary, "")
 
 	return strings.TrimSpace(summary)
-}
-
-func cleanSubtitle(description string) string {
-	description = strings.TrimSpace(description)
-	if description == "" {
-		return ""
-	}
-
-	lines := strings.Split(description, "\n")
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-
-		if line == "" {
-			continue
-		}
-
-		if strings.Contains(line, "http://") || strings.Contains(line, "https://") {
-			continue
-		}
-
-		return line
-	}
-
-	return ""
 }
 
 func postToMixi2(text string) error {
